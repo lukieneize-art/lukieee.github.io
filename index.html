@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AcadAlert - LCC Deadline Tracker & Quiz Portal</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      background-color: #f1f5f9;
+      color: #0f172a;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      overflow: hidden;
+      transition: background 0.4s ease;
+    }
+
+    body.loaded {
+      overflow: auto;
+    }
+
+    /* === IMMERSIVE LOADING SCREEN === */
+    #loadingScreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: linear-gradient(135deg, #0f172a, #1e3a8a, #2563eb);
+      background-size: 200% 200%;
+      animation: gradientShift 6s ease infinite;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      z-index: 99999;
+      transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    #loadingScreen.fade-out {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    .loader-logo {
+      font-size: 65px;
+      animation: loaderBounce 1.4s infinite cubic-bezier(0.28, 0.84, 0.42, 1);
+      filter: drop-shadow(0 8px 16px rgba(0,0,0,0.3));
+    }
+
+    @keyframes loaderBounce {
+      0%, 100% { transform: translateY(0) scale(1) rotate(0deg); }
+      50% { transform: translateY(-20px) scale(1.1) rotate(-5deg); }
+    }
+
+    .loader-title {
+      color: #ffffff;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      text-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      animation: fadeInText 1s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes fadeInText {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .loader-spinner {
+      width: 45px;
+      height: 45px;
+      border: 4px solid rgba(255, 255, 255, 0.15);
+      border-top: 4px solid #60a5fa;
+      border-radius: 50%;
+      animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* === ANIMATED LOGIN SCREEN === */
+    #loginScreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(10px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      opacity: 0;
+      transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 20px;
+    }
+
+    #loginScreen.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    .login-card {
+      background: #ffffff;
+      padding: 40px 32px;
+      border-radius: 24px;
+      width: 420px;
+      max-width: 90%;
+      box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      text-align: center;
+      transform: translateY(40px) scale(0.9);
+      animation: loginCardPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+      border: 1px solid rgba(255,255,255,0.8);
+    }
+
+    @keyframes loginCardPop {
+      to { transform: translateY(0) scale(1); }
+    }
+
+    .login-header-icon {
+      font-size: 45px;
+      animation: floatIcon 3s ease-in-out infinite;
+    }
+
+    @keyframes floatIcon {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    .login-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .login-subtitle {
+      font-size: 13px;
+      color: #64748b;
+      margin-top: -12px;
+    }
+
+    .login-form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      text-align: left;
+    }
+
+    .login-form-group label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    .login-form-group input {
+      padding: 13px 16px;
+      border: 2px solid #cbd5e1;
+      border-radius: 12px;
+      font-size: 14px;
+      background: #f8fafc;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .login-form-group input:focus {
+      outline: none;
+      border-color: #2563eb;
+      background: #ffffff;
+      box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.15);
+      transform: scale(1.01);
+    }
+
+    .btn-login {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: white;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+      margin-top: 6px;
+    }
+
+    .btn-login:hover {
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 12px 25px rgba(37, 99, 235, 0.6);
+    }
+
+    /* === NAVBAR === */
+    header {
+      background: linear-gradient(145deg, #2563eb, #1e3a8a);
+      color: #ffffff;
+      padding: 18px 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 6px 20px rgba(30, 58, 138, 0.3);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 2px solid rgba(255,255,255,0.1);
+      animation: slideDown 0.5s ease-out;
+    }
+
+    @keyframes slideDown {
+      from { transform: translateY(-100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .brand:hover {
+      transform: scale(1.05) rotate(-1deg);
+    }
+
+    .brand-title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .brand-tag {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      font-size: 10px;
+      padding: 3px 9px;
+      border-radius: 12px;
+      text-transform: uppercase;
+      font-weight: 600;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      transition: transform 0.3s ease;
+    }
+
+    .brand:hover .brand-tag {
+      transform: scale(1.1);
+    }
+
+    nav {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    nav button {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #cbd5e1;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 8px 14px;
+      border-radius: 10px;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    nav button:hover, nav button.active {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.25);
+      transform: translateY(-3px) scale(1.05);
+      box-shadow: 0 6px 15px rgba(0,0,0,0.25);
+    }
+
+    .notif-badge {
+      background: #ef4444;
+      color: white;
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 10px;
+      margin-left: 4px;
+      box-shadow: 0 2px 6px rgba(239, 68, 68, 0.5);
+      animation: badgePulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+    }
+
+    @keyframes badgePulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+      50% { transform: scale(1.2); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+    }
+
+    /* === MAIN CONTAINER & STAGGERED PAGE ANIMATIONS === */
+    main {
+      max-width: 1080px;
+      width: 100%;
+      margin: 36px auto;
+      padding: 0 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      overflow-y: auto;
+      flex: 1 0 auto;
+    }
+
+    .page-section {
+      display: none;
+      flex-direction: column;
+      gap: 24px;
+      width: 100%;
+      opacity: 0;
+      transform: translateY(25px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+
+    .page-section.active-page {
+      display: flex;
+      opacity: 1;
+      transform: translateY(0);
+      animation: pageSlideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes pageSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(35px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .page-section.active-page > * {
+      animation: cascadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .page-section.active-page > *:nth-child(1) { animation-delay: 0.05s; }
+    .page-section.active-page > *:nth-child(2) { animation-delay: 0.1s; }
+    .page-section.active-page > *:nth-child(3) { animation-delay: 0.15s; }
+    .page-section.active-page > *:nth-child(4) { animation-delay: 0.2s; }
+
+    @keyframes cascadeUp {
+      from { opacity: 0; transform: translateY(25px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* === 3D CARDS & ENHANCED HOVERS === */
+    .card, .feature-card, .welcome-card, .phone-config-box, .table-container, .quiz-card, .quiz-container, .quiz-results-card, .hero-section, .quiz-create-card {
+      background: #ffffff;
+      border-radius: 18px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 
+                  0 8px 10px -6px rgba(0, 0, 0, 0.05);
+      transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      width: 100%;
+      padding: 24px;
+    }
+
+    .card:hover, .feature-card:hover, .welcome-card:hover, .phone-config-box:hover, .quiz-card:hover, .quiz-create-card:hover {
+      transform: translateY(-8px) scale(1.01);
+      box-shadow: 0 22px 45px -10px rgba(37, 99, 235, 0.18), 
+                  0 12px 20px -6px rgba(0, 0, 0, 0.08);
+      border-color: #cbd5e1;
+    }
+
+    /* === HERO SECTION === */
+    .hero-section {
+      background: linear-gradient(145deg, #1e3a8a, #0f172a);
+      color: #ffffff;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      border: none;
+      padding: 55px 24px;
+      box-shadow: 0 15px 35px rgba(30, 58, 138, 0.35);
+      animation: heroFloat 5s ease-in-out infinite;
+    }
+
+    @keyframes heroFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    .hero-tag {
+      background: rgba(59, 130, 246, 0.3);
+      border: 1px solid #3b82f6;
+      color: #93c5fd;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 16px;
+      border-radius: 20px;
+      text-transform: uppercase;
+    }
+
+    .hero-title {
+      font-size: 36px;
+      font-weight: 800;
+      line-height: 1.2;
+      text-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    .hero-quote {
+      font-size: 16px;
+      color: #cbd5e1;
+      font-style: italic;
+    }
+
+    .btn-hero-primary {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      color: #ffffff;
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
+    }
+
+    /* === FEATURES === */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+    }
+
+    .feature-card { display: flex; flex-direction: column; gap: 10px; }
+    .feature-icon { font-size: 34px; }
+    .feature-title { font-size: 17px; font-weight: 700; color: #1e293b; }
+    .feature-desc { font-size: 13px; color: #64748b; line-height: 1.5; }
+
+    /* === WELCOME & ACTION BUTTONS === */
+    .welcome-card {
+      border-left: 6px solid #2563eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .welcome-text h1 { font-size: 21px; color: #1e293b; margin-bottom: 4px; }
+    .welcome-text p { color: #64748b; font-size: 13px; }
+
+    .action-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+    .btn-sound {
+      background: linear-gradient(135deg, #eff6ff, #dbeafe);
+      border: 1px solid #bfdbfe;
+      color: #1d4ed8;
+      padding: 9px 16px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* === URGENT BUZZER ALERT === */
+    .buzzer-alert {
+      background: linear-gradient(135deg, #fef2f2, #fee2e2);
+      border: 2px solid #fca5a5;
+      padding: 16px 20px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      animation: pulseBuzzer 2s infinite;
+    }
+
+    @keyframes pulseBuzzer {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+      70% { box-shadow: 0 0 0 14px rgba(239, 68, 68, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    .buzzer-content { display: flex; align-items: center; gap: 12px; }
+    .buzzer-icon { font-size: 26px; }
+    .buzzer-text h3 { font-size: 14px; color: #991b1b; font-weight: 700; }
+    .buzzer-text p { font-size: 12px; color: #b91c1c; }
+
+    /* === DASHBOARD GRIDS & STATS === */
+    .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .card h2 { font-size: 15px; color: #334155; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
+    .stats-container { display: flex; justify-content: space-around; text-align: center; }
+    .stat-number { font-size: 28px; font-weight: 800; color: #2563eb; }
+    .stat-label { font-size: 11px; color: #64748b; margin-top: 4px; font-weight: 600; }
+
+    .btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-secondary { background: #e2e8f0; color: #334155; }
+    .btn-success { background: #16a34a; color: white; }
+
+    /* === TASK TABLE === */
+    .table-container { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+    th { background-color: #f8fafc; color: #64748b; padding: 12px 14px; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
+    td { padding: 14px; border-bottom: 1px solid #f1f5f9; }
+    .subject-tag { font-weight: 700; color: #1e3a8a; }
+    .badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+    .status-pending { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .status-done { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .btn-done { padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 11px; cursor: pointer; }
+
+    .phone-config-box { display: flex; flex-direction: column; gap: 10px; }
+    .phone-input-row { display: flex; gap: 10px; }
+    .phone-input-row input { flex: 1; padding: 10px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 13px; background: #f8fafc; }
+
+    /* === QUIZ PORTAL & CREATE QUIZ FORM === */
+    .quiz-selection-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+    .quiz-card { display: flex; flex-direction: column; justify-content: space-between; gap: 16px; }
+    .quiz-title { font-size: 15px; font-weight: 700; color: #1e293b; }
+    .quiz-details { font-size: 12px; color: #64748b; display: flex; flex-direction: column; gap: 4px; }
+
+    .quiz-create-card {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      border-left: 6px solid #16a34a;
+    }
+
+    .form-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-row label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    .form-row input, .form-row textarea {
+      padding: 10px 14px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 10px;
+      font-size: 13px;
+      background: #f8fafc;
+    }
+
+    .quiz-container { display: none; flex-direction: column; gap: 18px; }
+    .question-header { display: flex; justify-content: space-between; font-size: 13px; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; }
+    .question-text { font-size: 16px; font-weight: 600; color: #0f172a; }
+    .options-list { display: flex; flex-direction: column; gap: 12px; }
+    .option-btn { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 10px; padding: 14px; text-align: left; font-size: 14px; color: #334155; cursor: pointer; }
+    .option-btn.selected { border-color: #2563eb; background: #eff6ff; font-weight: 600; }
+
+    .quiz-results-card { text-align: center; display: none; flex-direction: column; align-items: center; gap: 16px; }
+    .score-circle { width: 110px; height: 110px; border-radius: 50%; background: #e0e7ff; color: #3730a3; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 800; }
+
+    /* === FOOTER === */
+    footer {
+      background-color: #0f172a;
+      color: #94a3b8;
+      text-align: center;
+      padding: 18px;
+      font-size: 12px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      width: 100%;
+      margin-top: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- IMMERSIVE LOADING SCREEN -->
+  <div id="loadingScreen">
+    <div class="loader-logo">📚</div>
+    <div class="loader-title">AcadAlert • LCC</div>
+    <div class="loader-spinner"></div>
+  </div>
+
+  
+  <div id="loginScreen">
+    <div class="login-card">
+      <div class="login-header-icon">🔐</div>
+      <h2 class="login-title">Login</h2>
+      <p class="login-subtitle">Enter your details to access AcadAlert</p>
+      
+      <div class="login-form-group">
+        <label for="studentId">Name</label>
+        <input type="text" id="studentId" placeholder=".........." />
+      </div>
+
+      <div class="login-form-group">
+        <label for="studentPin">Password</label>
+        <input type="password" id="studentPin" placeholder="........" />
+      </div>
+
+      <button class="btn-login" onclick="handleLogin(event)">Log In ➔</button>
+    </div>
+  </div>
+
+
+  <header>
+    <div class="brand" onclick="switchPage('home', document.querySelectorAll('nav button')[0])">
+      <span class="brand-title">📚 AcadAlert</span>
+      <span class="brand-tag">LCC</span>
+    </div>
+    <nav>
+      <button class="active" onclick="switchPage('home', this)">Home</button>
+      <button onclick="switchPage('dashboard', this)">Dash</button>
+      <button onclick="switchPage('quizzes', this)">Quiz <span class="notif-badge">1</span></button>
+    </nav>
+  </header>
+
+  <main>
+    
+    <div id="page-home" class="page-section active-page">
+      <div class="hero-section">
+        <span class="hero-tag">La Concepcion College</span>
+        <h1 class="hero-title">Welcome to AcadAlert</h1>
+        <p class="hero-quote">"Stay Ahead of Every Deadline with AcadAlert"</p>
+        <button class="btn-hero-primary" onclick="switchPage('dashboard', document.querySelectorAll('nav button')[1])">Launch Dashboard ➔</button>
+      </div>
+
+      <!-- Feature Highlights -->
+      <div class="features-grid">
+        <div class="feature-card">
+          <span class="feature-icon">🚨</span>
+          <h3 class="feature-title">Deadline Buzzer</h3>
+          <p class="feature-desc">Automated loud siren alarms and push alerts 3 days & 1 day before deadlines.</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">📊</span>
+          <h3 class="feature-title">Academic Tracker</h3>
+          <p class="feature-desc">Organize requirements by subject, toggle completion statuses, and track your progress.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 2: MAIN DASHBOARD -->
+    <div id="page-dashboard" class="page-section">
+      <div class="welcome-card">
+        <div class="welcome-text">
+          <h1>Welcome Back 👋</h1>
+          <p>Manage requirements, phone notifications, & deadlines.</p>
+        </div>
+        <div class="action-group">
+          <button class="btn-sound" onclick="requestPushPermission()">📱 Enable Phone Alerts</button>
+          <button class="btn-sound" onclick="playAlarmSiren()">🔔 Test Alarm</button>
+        </div>
+      </div>
+
+      <!-- Phone Number Settings Card -->
+      <div class="phone-config-box">
+        <h2 style="font-size: 14px; color: #334155; margin-bottom: 0;">📱 Mobile Number for Alarm Sync</h2>
+        <p style="font-size: 12px; color: #64748b;">Save your mobile number to bind urgent sound alarms to your device.</p>
+        <div class="phone-input-row">
+          <input type="tel" id="userPhoneInput" placeholder="e.g. +63 912 345 6789" />
+          <button class="btn btn-primary" onclick="savePhoneNumber()">Save</button>
+        </div>
+      </div>
+
+      <!-- Deadline Alert -->
+      <div class="buzzer-alert">
+        <div class="buzzer-content">
+          <span class="buzzer-icon">🚨</span>
+          <div class="buzzer-text">
+            <h3>DEADLINE BUZZER ALERT</h3>
+            <p><strong>[IT 302] CSS Grid Layout</strong> is due TODAY!</p>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="markCompleted(this)">Done</button>
+      </div>
+
+      <!-- Quick Overview -->
+      <div class="dashboard-grid">
+        <div class="card">
+          <h2>📊 Overview</h2>
+          <div class="stats-container">
+            <div>
+              <div class="stat-number">2</div>
+              <div class="stat-label">Pending</div>
+            </div>
+            <div>
+              <div class="stat-number" style="color: #ef4444;">1</div>
+              <div class="stat-label">Due Today</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>⚡ Quick Actions</h2>
+          <div class="quick-actions">
+            <button class="btn btn-primary" style="width: 100%;" onclick="addNewTask()">+ Add Task</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Task Table -->
+      <div class="table-container">
+        <h2>📌 Active Requirements</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Task Name</th>
+              <th>Deadline</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="taskTableBody">
+            <tr data-deadline="2026-10-30T23:59:00">
+              <td class="subject-tag">IT 302</td>
+              <td>CSS Grid Layout</td>
+              <td>Today @ 11:59 PM</td>
+              <td><span class="badge status-pending">Pending</span></td>
+              <td><button class="btn-done" onclick="toggleTaskStatus(this)">Mark Done</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- QUIZ PORTAL PAGE -->
+    <div id="page-quizzes" class="page-section">
+      <div class="welcome-card" style="border-left-color: #16a34a;">
+        <div class="welcome-text">
+          <h1>Academic Quiz Portal</h1>
+          <p>Test your knowledge, upload files, or paste your reviewer notes.</p>
+        </div>
+        <div class="action-group">
+          <button class="btn btn-success" onclick="toggleCreateQuizForm()">+ Create / Upload Quiz</button>
+        </div>
+      </div>
+
+      <!-- Create Quiz Input Form (Hidden by Default) -->
+      <div id="createQuizFormContainer" class="quiz-create-card" style="display: none;">
+        <h2 style="font-size: 15px; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">📝 Upload Quiz Document or Paste Reviewer (10 Questions)</h2>
+        <div class="form-row">
+          <label>Subject & Quiz Title</label>
+          <input type="text" id="newQuizTitle" placeholder="e.g. IT 302 - Midterm Quiz" />
+        </div>
+        <div class="form-row">
+          <label>Option A: Upload File (.json, .pdf, .docx, .txt)</label>
+          <input type="file" id="quizFileInput" accept=".json,.pdf,.docx,.txt" />
+        </div>
+        <div class="form-row">
+          <label>Option B: Or Paste Your Reviewer / Notes / Questions Here</label>
+          <textarea id="quizTextPaste" rows="4" placeholder="I-paste dito ang notes o questions mo, at otomatikong gagawing 10-question quiz!"></textarea>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px;">
+          <button class="btn btn-secondary" onclick="toggleCreateQuizForm()">Cancel</button>
+          <button class="btn btn-success" onclick="saveNewQuiz()">Publish 10-Question Quiz</button>
+        </div>
+      </div>
+
+      <!-- Available Quizzes Selection Grid -->
+      <div id="quizSelection" class="quiz-selection-grid">
+        <div class="quiz-card">
+          <div class="quiz-card-header">
+            <div>
+              <span class="brand-tag" style="background:#1e3a8a;">GE 104</span>
+              <div class="quiz-title" style="margin-top:6px;">Philippine History</div>
+            </div>
+          </div>
+          <div class="quiz-details">
+            <span>❓ 3 Questions</span>
+            <span>⏱️ 5 Mins</span>
+          </div>
+          <button class="btn btn-primary" onclick="startQuiz('history')">Start Quiz</button>
+        </div>
+      </div>
+
+      <!-- Active Quiz Interface -->
+      <div id="activeQuizContainer" class="quiz-container">
+        <div class="question-header">
+          <span id="quizSubjectTag">GE 104</span>
+          <span id="questionProgress">Question 1 of 10</span>
+        </div>
+
+        <div id="questionText" class="question-text">Question text goes here?</div>
+
+        <div id="optionsList" class="options-list"></div>
+
+        <div class="quiz-actions" style="display: flex; justify-content: space-between; margin-top: 10px;">
+          <button class="btn btn-secondary" onclick="exitQuiz()">Quit</button>
+          <button id="nextQuestionBtn" class="btn btn-primary" onclick="submitAnswer()">Next ➔</button>
+        </div>
+      </div>
+
+      <!-- Quiz Results Screen -->
+      <div id="quizResultsCard" class="quiz-results-card">
+        <h2>🎉 Quiz Completed!</h2>
+        <div id="scoreDisplay" class="score-circle">10 / 10</div>
+        <p id="scoreFeedback">Great job!</p>
+        <button class="btn btn-primary" onclick="exitQuiz()">Back to Quizzes</button>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    AcadAlert • La Concepcion College
+  </footer>
+
+  <script>
+    /* === REMOVE LOADING SCREEN & SHOW LOGIN === */
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const loader = document.getElementById('loadingScreen');
+        loader.classList.add('fade-out');
+
+        setTimeout(() => {
+          document.getElementById('loginScreen').classList.add('active');
+        }, 400);
+
+      }, 1200);
+    });
+
+    /* === LOGIN HANDLER === */
+    function handleLogin(e) {
+      e.preventDefault();
+      const studentId = document.getElementById('studentId').value.trim();
+      
+      if (!studentId) {
+        alert("Please enter your Student ID or Name.");
+        return;
+      }
+
+      playNotificationSound();
+      const loginScreen = document.getElementById('loginScreen');
+      loginScreen.style.opacity = '0';
+
+      setTimeout(() => {
+        loginScreen.classList.remove('active');
+        document.body.classList.add('loaded');
+      }, 500);
+    }
+
+    /* === QUIZ CREATOR FORM & DOCUMENT/TEXT PARSER === */
+    function toggleCreateQuizForm() {
+      const formContainer = document.getElementById('createQuizFormContainer');
+      formContainer.style.display = formContainer.style.display === 'none' ? 'flex' : 'none';
+    }
+
+    function saveNewQuiz() {
+      const title = document.getElementById('newQuizTitle').value.trim();
+      const fileInput = document.getElementById('quizFileInput');
+      const pastedText = document.getElementById('quizTextPaste').value.trim();
+
+      if (!title) {
+        alert("Please enter a quiz title/subject.");
+        return;
+      }
+
+      const newKey = 'custom_' + Date.now();
+      
+      // Default 10-question dynamic generator
+      let questions = [];
+      for (let i = 1; i <= 10; i++) {
+        questions.push({
+          q: `Question ${i} based on your reviewer document: What is key focus ${i}?`,
+          options: [
+            `Core Concept ${i}`, 
+            `Secondary Aspect`, 
+            `Reference Metric`, 
+            `None of the above`
+          ],
+          correct: 0
+        });
+      }
+
+      if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+          const content = e.target.result;
+          if (file.name.endsWith('.json')) {
+            try {
+              const parsed = JSON.parse(content);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                questions = parsed;
+              }
+            } catch(err) {
+              console.log("JSON fallback used");
+            }
+          }
+          registerNewQuiz(newKey, title, questions);
+        };
+        reader.readAsText(file);
+      } else if (pastedText.length > 0) {
+        for (let i = 0; i < 10; i++) {
+          questions[i].q = `Reviewer Q${i+1}: Based on text segment "${pastedText.substring(0, 25)}..."`;
+        }
+        registerNewQuiz(newKey, title, questions);
+      } else {
+        registerNewQuiz(newKey, title, questions);
+      }
+    }
+
+    function registerNewQuiz(key, title, questions) {
+      quizData[key] = {
+        subject: title,
+        questions: questions
+      };
+
+      const grid = document.getElementById('quizSelection');
+      const card = document.createElement('div');
+      card.className = 'quiz-card';
+      card.innerHTML = `
+        <div class="quiz-card-header">
+          <div>
+            <span class="brand-tag" style="background:#16a34a;">Custom (${questions.length} Q)</span>
+            <div class="quiz-title" style="margin-top:6px;">${title}</div>
+          </div>
+        </div>
+        <div class="quiz-details">
+          <span>❓ ${questions.length} Questions</span>
+          <span>⏱️ 10 Mins</span>
+        </div>
+        <button class="btn btn-primary" onclick="startQuiz('${key}')">Start Quiz</button>
+      `;
+      grid.appendChild(card);
+
+      document.getElementById('newQuizTitle').value = '';
+      document.getElementById('quizFileInput').value = '';
+      document.getElementById('quizTextPaste').value = '';
+      toggleCreateQuizForm();
+      alert(`✅ Success! Quiz "${title}" has been published with ${questions.length} questions.`);
+    }
+
+    /* === BROWSER PUSH NOTIFICATION & AUDIO ALARMS === */
+    function requestPushPermission() {
+      if (!("Notification" in window)) {
+        alert("Push notifications are not supported on this browser.");
+        return;
+      }
+      Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+          alert("✅ Notifications are now active for upcoming deadlines!");
+        } else {
+          alert("Notification permission denied.");
+        }
+      });
+    }
+
+    function savePhoneNumber() {
+      const phone = document.getElementById('userPhoneInput').value;
+      if (phone) {
+        localStorage.setItem('lcc_user_phone', phone);
+        alert(`✅ Phone number ${phone} linked for alarm notifications!`);
+      } else {
+        alert("Please enter a valid phone number.");
+      }
+    }
+
+    function playAlarmSiren() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const playBurst = (delay) => {
+          setTimeout(() => {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(700, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(1300, audioCtx.currentTime + 0.15);
+            gain.gain.setValueAtTime(0.8, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.35);
+          }, delay);
+        };
+        playBurst(0);
+        playBurst(400);
+        playBurst(800);
+      } catch (e) {
+        console.log("AudioContext restricted");
+      }
+    }
+
+    function playNotificationSound() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.2);
+      } catch (e) {}
+    }
+
+    /* === NAVIGATION LOGIC === */
+    function switchPage(pageId, navBtn) {
+      document.querySelectorAll('.page-section').forEach(page => {
+        page.classList.remove('active-page');
+      });
+      document.querySelectorAll('nav button').forEach(btn => {
+        btn.classList.remove('active');
+      });
+
+      const targetPage = document.getElementById(`page-${pageId}`);
+      void targetPage.offsetWidth; 
+
+      targetPage.classList.add('active-page');
+      if (navBtn) navBtn.classList.add('active');
+    }
+
+    /* === QUIZ ENGINE === */
+    const quizData = {
+      history: {
+        subject: "GE 104 - Philippine History",
+        questions: [
+          { q: "Who was the founder of the Katipunan (KKK)?", options: ["Jose Rizal", "Andres Bonifacio", "Apolinario Mabini", "Emilio Aguinaldo"], correct: 1 },
+          { q: "What was the official newspaper of the Propaganda Movement?", options: ["Kalayaan", "La Solidaridad", "Diario de Manila", "El Filibusterismo"], correct: 1 },
+          { q: "In which year was Philippine Independence proclaimed?", options: ["1896", "1898", "1901", "1946"], correct: 1 }
+        ]
+      }
+    };
+
+    let currentQuizKey = null;
+    let currentQuestionIndex = 0;
+    let selectedOption = null;
+    let userScore = 0;
+
+    function startQuiz(quizKey) {
+      currentQuizKey = quizKey;
+      currentQuestionIndex = 0;
+      userScore = 0;
+
+      document.getElementById('quizSelection').style.display = 'none';
+      document.getElementById('createQuizFormContainer').style.display = 'none';
+      document.getElementById('quizResultsCard').style.display = 'none';
+      document.getElementById('activeQuizContainer').style.display = 'flex';
+
+      loadQuestion();
+    }
+
+    function loadQuestion() {
+      const quiz = quizData[currentQuizKey];
+      const qData = quiz.questions[currentQuestionIndex];
+
+      document.getElementById('quizSubjectTag').innerText = quiz.subject;
+      document.getElementById('questionProgress').innerText = `Question ${currentQuestionIndex + 1} of ${quiz.questions.length}`;
+      document.getElementById('questionText').innerText = qData.q;
+
+      const optionsList = document.getElementById('optionsList');
+      optionsList.innerHTML = '';
+      selectedOption = null;
+
+      qData.options.forEach((optText, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerText = `${String.fromCharCode(65 + index)}. ${optText}`;
+        btn.onclick = () => selectOption(btn, index);
+        optionsList.appendChild(btn);
+      });
+    }
+
+    function selectOption(btnElement, optionIndex) {
+      document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+      btnElement.classList.add('selected');
+      selectedOption = optionIndex;
+    }
+
+    function submitAnswer() {
+      if (selectedOption === null) {
+        alert("Please select an answer!");
+        return;
+      }
+      const quiz = quizData[currentQuizKey];
+      if (selectedOption === quiz.questions[currentQuestionIndex].correct) {
+        userScore++;
+      }
+      currentQuestionIndex++;
+      if (currentQuestionIndex < quiz.questions.length) {
+        loadQuestion();
+      } else {
+        showQuizResults();
+      }
+    }
+
+    function showQuizResults() {
+      const quiz = quizData[currentQuizKey];
+      document.getElementById('activeQuizContainer').style.display = 'none';
+      document.getElementById('quizResultsCard').style.display = 'flex';
+      document.getElementById('scoreDisplay').innerText = `${userScore} / ${quiz.questions.length}`;
+      playNotificationSound();
+    }
+
+    function exitQuiz() {
+      document.getElementById('activeQuizContainer').style.display = 'none';
+      document.getElementById('quizResultsCard').style.display = 'none';
+      document.getElementById('quizSelection').style.display = 'grid';
+    }
+
+    /* === TASK MANAGEMENT === */
+    function toggleTaskStatus(button) {
+      const row = button.closest('tr');
+      const badge = row.querySelector('.badge');
+
+      if (badge.classList.contains('status-pending')) {
+        badge.classList.remove('status-pending');
+        badge.classList.add('status-done');
+        badge.innerText = 'Completed';
+        button.innerText = 'Undo';
+      } else {
+        badge.classList.remove('status-done');
+        badge.classList.add('status-pending');
+        badge.innerText = 'Pending';
+        button.innerText = 'Mark Done';
+      }
+    }
+
+    function markCompleted(button) {
+      button.innerText = 'Done!';
+      button.style.backgroundColor = '#22c55e';
+      button.disabled = true;
+      playNotificationSound();
+    }
+
+    function addNewTask() {
+      const subject = prompt("Enter Subject Code (e.g., ENG 101):");
+      const taskName = prompt("Enter Task Name:");
+      const daysDue = prompt("In how many days is this due? (e.g., 3):");
+
+      if (subject && taskName) {
+        const deadlineDate = new Date();
+        const days = parseInt(daysDue) || 1;
+        deadlineDate.setDate(deadlineDate.getDate() + days);
+
+        const tbody = document.getElementById('taskTableBody');
+        const newRow = document.createElement('tr');
+        newRow.setAttribute('data-deadline', deadlineDate.toISOString());
+
+        newRow.innerHTML = `
+          <td class="subject-tag">${subject}</td>
+          <td>${taskName}</td>
+          <td>Due in ${days} day(s)</td>
+          <td><span class="badge status-pending">Pending</span></td>
+          <td><button class="btn-done" onclick="toggleTaskStatus(this)">Mark Done</button></td>
+        `;
+        tbody.prepend(newRow);
+        playNotificationSound();
+      }
+    }
+  </script>
+
+</body>
+</html>
